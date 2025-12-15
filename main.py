@@ -1,13 +1,16 @@
-import pytz
-from datetime import datetime
-import os
 import subprocess
+from datetime import datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
+from cleanup import get_js_cleanup
+from PIL import Image
 
-URLS_FILE = "urls.txt"
-OUTPUT_DIR = "screenshots"
+URLS_FILE = Path("urls.txt")
+OUTPUT_DIR = Path("screenshots")
+TZ_WARSAW = ZoneInfo("Europe/Warsaw")
 
 def load_urls():
-    if not os.path.exists(URLS_FILE):
+    if not URLS_FILE.exists():
         raise FileNotFoundError(f"{URLS_FILE} not found")
 
     with open(URLS_FILE) as file:
@@ -16,31 +19,42 @@ def load_urls():
 def take_screenshots():
     urls = load_urls()
     
-    cet = pytz.timezone("Europe/Warsaw")
-    timestamp = datetime.now(cet).strftime("%Y-%m-%d_%H-%M")
-    
+    timestamp = datetime.now(TZ_WARSAW).strftime("%Y-%m-%d_%H-%M")
     print(f"\nScreenshot cycle {timestamp}")
-    
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+        
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     
     for url in urls:
-        temp_png = f"{OUTPUT_DIR}/{url}_{timestamp}.png"
-        final_webp = f"{OUTPUT_DIR}/{url}_{timestamp}.webp"
-        
-        print(f" > Capturing {url}")
+        filename_base = f"{url}_{timestamp}"
+        temp_png_path = OUTPUT_DIR / f"{filename_base}.png"
+        final_webp_path = OUTPUT_DIR / f"{filename_base}.webp"    
+            
+        target_url = url if url.startswith("http") else f"https://{url}"
+
+        print(f" > Capturing {target_url} -> {final_webp_path.name}")
 
         command = [
-                "shot-scraper", url,
-                "-o", temp_png,
-                "--wait", "2000",
-                "--width", "1440",
-                "--height", "1080"
-            ]
+            "shot-scraper", target_url, 
+            "-o", str(temp_png_path),
+            "--wait", "2000",
+            "--width", "1440",
+            "--height", "1080"
+        ]
         
-        command.extend(["--javascript", "()=>{}"])
+        command.extend(["--javascript", get_js_cleanup()])
     
         try:
             subprocess.run(command, check=True)
+            
+            try:
+                with Image.open(temp_png_path) as img:
+                    img.save(final_webp_path, "WEBP", quality=60, optimize=True)
+                
+                temp_png_path.unlink()
+                print(f"Saved WebP")
+                
+            except Exception as img_err:
+                print(f"Conversion failed: {img_err}")
             
         except Exception as e:
             print(f"Error capturing {url}: {e}")

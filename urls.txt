@@ -21,7 +21,10 @@ npr.org
 cbsnews.com
 bbc.com
 techcrunch.com
-nature.com
-nytimes.com
-rferl.org
-politico.com
+politico.eu
+thesun.co.uk
+aljazeera.com
+salon.com
+huffpost.com
+sapo.pt
+spiegel.de
