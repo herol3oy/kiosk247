@@ -1,5 +1,6 @@
 import subprocess
-from datetime import datetime
+import time
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from cleanup import get_js_cleanup
@@ -59,4 +60,22 @@ def take_screenshots():
         except Exception as e:
             print(f"Error capturing {url}: {e}")
 
-take_screenshots()
+def wait_until_next_hour():
+    now = datetime.now(TZ_WARSAW)
+    
+    next_run = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    
+    sleep_seconds = (next_run - now).total_seconds()
+    
+    print(f"\nSleeping {int(sleep_seconds)}s until {next_run.strftime('%H:%M:%S')}")
+    time.sleep(sleep_seconds)
+
+def main():
+    print(f"Service started in {TZ_WARSAW}")
+    
+    while True:
+        wait_until_next_hour()
+        take_screenshots()
+
+if __name__ == "__main__":
+    main()
