@@ -1,5 +1,5 @@
-apscheduler
+shot-scraper
 cloudinary
+apscheduler
 supabase
 python-dotenv
-shot-scraper
