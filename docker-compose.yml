@@ -1,7 +1,9 @@
 services:
   engine:
     build: .
-    container_name: kiosk24
+    container_name: kiosk247
+    env_file:
+      - .env 
     volumes:
       - ./screenshots:/code/screenshots
       - ./urls.txt:/code/urls.txt
