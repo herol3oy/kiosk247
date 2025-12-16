@@ -5,6 +5,5 @@ services:
     env_file:
       - .env 
     volumes:
-      - ./screenshots:/code/screenshots
       - ./urls.txt:/code/urls.txt
     restart: unless-stopped
