@@ -1,6 +1,6 @@
 import os
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 import signal
@@ -9,6 +9,7 @@ import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
@@ -49,20 +50,20 @@ def load_urls():
     with open(URLS_FILE) as file:
         return [line.strip() for line in file if line.strip()]
 
-def store_screenshot_job(url: str, public_id: str, cloudinary_url: str | None, tags: list, status: str):
+def store_screenshot_job(url: str, public_id: str, cloudinary_url: str | None, status: str, captured_at: datetime):
     try:
         supabase.table("screenshots").insert({
             "url": url,
             "public_id": public_id,
             "cloudinary_url": cloudinary_url,
-            "tags": tags,
             "job_status": status,
+            "captured_at": captured_at.isoformat(),
         }).execute()
         logger.info("Stored job in Supabase for %s with status %s", url, status)
     except Exception:
         logger.exception("Supabase insert failed for %s", url)
 
-def upload_screenshot(file_path: Path, public_id: str, tags: list):
+def upload_screenshot(file_path: Path, public_id: str):
     try:
         result = cloudinary.uploader.upload(
             file_path,
@@ -71,7 +72,6 @@ def upload_screenshot(file_path: Path, public_id: str, tags: list):
             overwrite=True,
             unique_filename=False,
             use_filename=False,
-            tags=tags,
         )
 
         secure_url = result["secure_url"]
@@ -91,8 +91,7 @@ def take_screenshots():
     now = datetime.now(TZ_WARSAW)
 
     timestamp = now.strftime("%Y-%m-%d_%H-%M")
-    year = now.strftime("%Y")
-    month = now.strftime("%m")
+    captured_at = now.astimezone(timezone.utc)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -101,8 +100,7 @@ def take_screenshots():
         filename = f"{url}_{timestamp}.jpg"
         temp_jpg_path = OUTPUT_DIR / filename
 
-        public_id = f"kiosk247/{url}/{year}/{month}/{timestamp}"
-        tags = ["kiosk247", url, year, month, "screenshot"]
+        public_id = f"kiosk247/{url}/{captured_at.strftime('%Y-%m-%dT%H-%M-%SZ')}"
 
         logger.info("Capturing %s", target_url)
 
@@ -118,16 +116,16 @@ def take_screenshots():
 
         try:
             subprocess.run(command, check=True, timeout=60)
-            upload_result = upload_screenshot(temp_jpg_path, public_id, tags)
+            upload_result = upload_screenshot(temp_jpg_path, public_id)
 
             if upload_result:
-                store_screenshot_job(url, public_id, upload_result["secure_url"], tags, "ok")
+                store_screenshot_job(url, public_id, upload_result["secure_url"], "ok", captured_at)
             else:
-                store_screenshot_job(url, public_id, None, tags, "failed")
+                store_screenshot_job(url, public_id, None, "failed", captured_at)
 
         except Exception:
             logger.error("Screenshot failed for %s", target_url, exc_info=True)
-            store_screenshot_job(url, public_id, None, tags, "failed")
+            store_screenshot_job(url, public_id, None, "failed", captured_at)
 
     logger.info("Screenshot job finished")
 
