@@ -89,7 +89,6 @@ def get_js_cleanup():
         .ad__container,
         .qc-cmp2-container,
         .pub-container,
-        .fides-overlay,
         .ad-stickyhero,
         .app-0-0-2,
         #onetrust-consent-sdk,
@@ -133,6 +132,22 @@ def get_js_cleanup():
         .banner,
         [class^="_spacer_"],
         .headerTopBarAdvert,
-        .header--top--bar--advert
+        .header--top--bar--advert,
+        #didomi-css,
+        .didomi-host,
+        .LeaderBoardAd-Mobile,
+        .ad-unit,
+        .welcome-ad,
+        .ReactModalPortal,
+        .cg_promo_popup,
+        .cm_issue_new,
+        .cg_baner_val_prop,
+        #animated-container,
+        .LeaderBoardAd-Mobile,
+        .zpr_box__m_top_1,
+        [data-concert="medrec_frontpage_hero_mobile"],
+        #adm-leaderboard,
+        .adunit,
+        .cap-message-container
     `).forEach(e => e.remove());
     """
