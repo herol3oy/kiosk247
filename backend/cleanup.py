@@ -148,6 +148,7 @@ def get_js_cleanup():
         [data-concert="medrec_frontpage_hero_mobile"],
         #adm-leaderboard,
         .adunit,
-        .cap-message-container
+        .cap-message-container,
+        #hook_box_topboard
     `).forEach(e => e.remove());
     """
