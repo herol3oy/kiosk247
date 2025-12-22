@@ -24,6 +24,11 @@ URLS_FILE = Path("urls.txt")
 OUTPUT_DIR = Path("screenshots")
 TZ_WARSAW = ZoneInfo("Europe/Warsaw")
 
+VIEWPORTS = {
+    "desktop": {"width": "1440", "height": "1080"},
+    "mobile": {"width": "390", "height": "844"},
+}
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -49,18 +54,30 @@ def load_urls():
     with open(URLS_FILE) as file:
         return [line.strip() for line in file if line.strip()]
 
-def store_screenshot_job(url: str, public_id: str, cloudinary_url: str | None, status: str, captured_at: datetime):
+
+def store_screenshot_job(
+    url: str,
+    public_id: str,
+    cloudinary_url: str | None,
+    status: str,
+    captured_at: datetime,
+    device: str,
+):
     try:
-        supabase.table("screenshots").insert({
-            "url": url,
-            "public_id": public_id,
-            "cloudinary_url": cloudinary_url,
-            "job_status": status,
-            "captured_at": captured_at.isoformat(),
-        }).execute()
-        logger.info("Stored job in Supabase for %s with status %s", url, status)
+        supabase.table("screenshots").insert(
+            {
+                "url": url,
+                "public_id": public_id,
+                "cloudinary_url": cloudinary_url,
+                "job_status": status,
+                "captured_at": captured_at.isoformat(),
+                "device": device,
+            }
+        ).execute()
+        logger.info("Stored %s job in Supabase for %s", device, url)
     except Exception:
-        logger.exception("Supabase insert failed for %s", url)
+        logger.exception("Supabase insert failed for %s (%s)", url, device)
+
 
 def upload_screenshot(file_path: Path, public_id: str):
     try:
@@ -88,43 +105,63 @@ def take_screenshots():
 
     urls = load_urls()
     now = datetime.now(TZ_WARSAW)
-
-    timestamp = now.strftime("%Y-%m-%d_%H-%M")
+    
+    timestamp_str = now.strftime("%Y-%m-%d_%H-%M")
     captured_at = now.astimezone(timezone.utc)
+    timestamp_iso = captured_at.strftime("%Y-%m-%dT%H-%M-%SZ")
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     for url in urls:
         target_url = f"https://{url}"
-        filename = f"{url}_{timestamp}.jpg"
-        temp_jpg_path = OUTPUT_DIR / filename
 
-        public_id = f"kiosk247/{url}/{captured_at.strftime('%Y-%m-%dT%H-%M-%SZ')}"
+        for device_name, dims in VIEWPORTS.items():
+            
+            filename = f"{url}_{device_name}_{timestamp_str}.jpg"
+            temp_jpg_path = OUTPUT_DIR / filename
+            
+            public_id = f"kiosk247/{url}/{device_name}/{timestamp_iso}"
 
-        logger.info("Capturing %s", target_url)
+            logger.info("Capturing %s [%s]", target_url, device_name)
 
-        command = [
-            "shot-scraper", target_url,
-            "-o", str(temp_jpg_path),
-            "--wait", "2000",
-            "--width", "1440",
-            "--height", "1080",
-            "--quality", "70",
-            "--javascript", get_js_cleanup(),
-        ]
+            command = [
+                "shot-scraper",
+                target_url,
+                "-o",
+                str(temp_jpg_path),
+                "--wait", "2000",
+                "--width", dims["width"],
+                "--height", dims["height"],
+                "--quality", "75",
+                "--javascript", get_js_cleanup(),
+            ]
+            
+            if device_name == "mobile":
+                command.extend(["--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"])
 
-        try:
-            subprocess.run(command, check=True, timeout=60)
-            upload_result = upload_screenshot(temp_jpg_path, public_id)
+            try:
+                subprocess.run(command, check=True, timeout=60)
+                upload_result = upload_screenshot(temp_jpg_path, public_id)
 
-            if upload_result:
-                store_screenshot_job(url, public_id, upload_result["secure_url"], "ok", captured_at)
-            else:
-                store_screenshot_job(url, public_id, None, "failed", captured_at)
+                if upload_result:
+                    store_screenshot_job(
+                        url,
+                        public_id,
+                        upload_result["secure_url"],
+                        "ok",
+                        captured_at,
+                        device_name,
+                    )
+                else:
+                    store_screenshot_job(
+                        url, public_id, None, "failed", captured_at, device_name
+                    )
 
-        except Exception:
-            logger.error("Screenshot failed for %s", target_url, exc_info=True)
-            store_screenshot_job(url, public_id, None, "failed", captured_at)
+            except Exception:
+                logger.error("Screenshot failed for %s [%s]", target_url, device_name, exc_info=True)
+                store_screenshot_job(
+                    url, public_id, None, "failed", captured_at, device_name
+                )
 
     logger.info("Screenshot job finished")
 
