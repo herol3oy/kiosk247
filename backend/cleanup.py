@@ -2,6 +2,21 @@ def get_js_cleanup():
     return """
     document.body.classList.remove("didomi-popup-open")
 
+    const advertClasses = [
+        "-top-bar-advert-logged-mobile", 
+        "-top-bar-advert-unlogged-mobile", 
+        "-top-bar-advert-logged-desktop", 
+        "-top-bar-advert-unlogged-desktop"
+    ];
+
+    document.querySelectorAll('.' + advertClasses.join(', .')).forEach(el => {
+        el.classList.remove(...advertClasses);
+    });
+
+    document.querySelectorAll('nav').forEach(e => 
+        e.classList.remove('navigation')
+    )
+
     document.querySelectorAll(`
         .ad-slot-module__container__VEdre,
         .container--ads,
@@ -111,9 +126,13 @@ def get_js_cleanup():
         [class^="app_gdpr"],
         .infor-ad,
         [class*="home-autopromo-link"],
+        .header-boost--promo,
         [data-test="top-ad"],
         [data-pogo="top"],
         #sd-cmp,
-        .banner
+        .banner,
+        [class^="_spacer_"],
+        .headerTopBarAdvert,
+        .header--top--bar--advert
     `).forEach(e => e.remove());
     """
