@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kiosk 24/7",
+  title: "Kiosk24",
   description: "Image snapshot of news websites 24/7",
 };
 

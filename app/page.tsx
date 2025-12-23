@@ -241,8 +241,7 @@ export default function Home() {
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b border-gray-100">
         <div className="mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-sm font-bold uppercase tracking-widest hidden sm:block">Kiosk 24/7</h1>
-            <h1 className="text-sm font-bold uppercase tracking-widest sm:hidden">Kiosk</h1>
+            <h1 className="text-sm font-bold uppercase tracking-widest">Kiosk24</h1>
 
             {!loading && uniqueUrls.length > 0 && (
               <button

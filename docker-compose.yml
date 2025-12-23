@@ -1,9 +1,0 @@
-services:
-  engine:
-    build: ./backend
-    container_name: kiosk247
-    env_file:
-      - ./backend/.env 
-    volumes:
-      - ./backend/urls.txt:/code/urls.txt
-    restart: unless-stopped
