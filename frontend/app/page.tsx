@@ -27,6 +27,7 @@ type Screenshot = {
   captured_at: string;
   cloudinary_url: string | null;
   job_status: "ok" | "failed";
+  device: "desktop" | "mobile";
 };
 
 // --- Helpers ---
@@ -55,6 +56,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [visibleUrls, setVisibleUrls] = useState<string[]>(DEFAULT_SITES);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [deviceMode, setDeviceMode] = useState<"desktop" | "mobile">("desktop");
 
   // --- Modal State ---
   const [selectedShot, setSelectedShot] = useState<Screenshot | null>(null);
@@ -98,6 +100,7 @@ export default function Home() {
         .from("screenshots")
         .select("*")
         .eq("job_status", "ok")
+        .eq("device", deviceMode)
         .gte("captured_at", start.toISOString())
         .lt("captured_at", end.toISOString())
         .order("url")
@@ -113,7 +116,7 @@ export default function Home() {
       setLoading(false);
     }
     load();
-  }, [date]);
+  }, [date, deviceMode]);
 
   // 3. DIALOG SYNC EFFECT
   useEffect(() => {
@@ -219,6 +222,18 @@ export default function Home() {
   }, [selectedShot, currentIndex]);
 
 
+  useEffect(() => {
+    const saved = localStorage.getItem("deviceMode");
+    if (saved === "desktop" || saved === "mobile") {
+      setDeviceMode(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("deviceMode", deviceMode);
+  }, [deviceMode]);
+
+
   return (
     <div className="min-h-screen bg-white text-neutral-900 font-sans tracking-tight selection:bg-neutral-200 overflow-hidden">
 
@@ -247,6 +262,29 @@ export default function Home() {
 
             )}
           </div>
+
+          <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1">
+            <button
+              onClick={() => setDeviceMode("desktop")}
+              className={`px-3 py-1 text-xs font-bold uppercase rounded-full transition
+      ${deviceMode === "desktop"
+                  ? "bg-black text-white"
+                  : "text-gray-500 hover:text-black"}`}
+            >
+              Desktop
+            </button>
+
+            <button
+              onClick={() => setDeviceMode("mobile")}
+              className={`px-3 py-1 text-xs font-bold uppercase rounded-full transition
+      ${deviceMode === "mobile"
+                  ? "bg-black text-white"
+                  : "text-gray-500 hover:text-black"}`}
+            >
+              Mobile
+            </button>
+          </div>
+
 
           <div className="relative" ref={calendarRef}>
             <button
@@ -366,14 +404,20 @@ export default function Home() {
                   <SwiperSlide key={shot.id} className="!w-auto">
                     <div
                       onClick={() => setSelectedShot(shot)}
-                      className="relative w-64 sm:w-72 aspect-video bg-gray-50 overflow-hidden rounded-md transition-transform active:scale-[0.98] text-left group/card shadow-sm border border-gray-100 block cursor-pointer select-none"
-                    >
+                      className={`
+                              relative w-64 sm:w-72
+                              bg-gray-50 overflow-hidden rounded-md
+                              transition-transform active:scale-[0.98]
+                              text-left group/card shadow-sm border border-gray-100
+                              block cursor-pointer select-none 
+                              ${deviceMode === "mobile" ? "aspect-9/16" : "aspect-video"}
+                            `}                    >
                       {shot.cloudinary_url ? (
                         <img
                           src={optimizedImage(shot.cloudinary_url, 600)}
                           alt=""
                           draggable={false}
-                          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                          className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                           loading="lazy"
                         />
                       ) : (
